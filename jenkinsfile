@@ -1,0 +1,60 @@
+pipeline{
+
+agent any
+	tools {
+ 	 maven 'MAVEN'
+	}
+
+	stages{
+		stage("package"){
+			steps{
+				bat label: '', script: 'mvn clean package'
+			}
+			post {
+				success{
+				    echo "Artifact is generated successfully"
+					echo "Archeiving artifacts..."
+					archiveArtifacts '**/*.war'
+				}
+				failure{
+					echo "something went wrong"
+				}
+
+			}
+		}
+		stage("Deploy to staging"){
+			steps{
+				build 'maven-webapp-deploy-to-staging'
+			}
+			post{
+				success{
+					echo"Application is deployed to staging"
+					}
+
+				failure{
+					echo"failed to deploy"
+					}
+			}
+		}
+		stage("checking code quality"){
+			steps{
+				build 'maven-webapp-checkstyle'
+			}
+		}
+		stage("Deploy to production"){
+			steps{
+				timeout(time: 5, unit: 'HOURS') {
+    					input 'Deploy an application to production?'
+				}
+				build 'maven-webapp-deploy-to-production'
+			}
+
+			post{
+				success{
+					echo "Deploy to production successfully"
+				}
+				failure{
+					echo "Failed to deploy an application to production"
+				}
+		}
+}
